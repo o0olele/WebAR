@@ -2,7 +2,7 @@
 <head>
 <meta charset="UTF-8">
 <title>spine-threejs</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r79/three.js"></script>
+<script src="./js/three.js"></script>
 <script src="./js/spine-threejs.js"></script>
 </head>
 <style>
@@ -46,7 +46,7 @@ function load (name, scale) {
 		geometry = new THREE.BoxGeometry(200, 200, 200);
 		material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
 		mesh = new THREE.Mesh(geometry, material);
-		scene.add(mesh);
+		// scene.add(mesh);
 
 		// Load the texture atlas using name.atlas and name.png from the AssetManager.
 		// The function passed to TextureAtlas is used to resolve relative paths.
@@ -58,7 +58,8 @@ function load (name, scale) {
 		// Create a SkeletonMesh from the data and attach it to the scene
 		skeletonMesh = new spine.threejs.SkeletonMesh(skeletonData);
 		skeletonMesh.state.setAnimation(0, "Move", true);
-		mesh.add(skeletonMesh);
+		scene.add(skeletonMesh)
+		//mesh.add(skeletonMesh);
 
 		requestAnimationFrame(render);
 	} else requestAnimationFrame(load);
@@ -94,8 +95,10 @@ function render() {
 	resize();
 
 	// rotate the cube
-	mesh.rotation.x = Math.sin(now) * Math.PI * 0.2;
-	mesh.rotation.y = Math.cos(now) * Math.PI * 0.4;
+	// mesh.rotation.x = Math.sin(now) * Math.PI * 0.2;
+	// mesh.rotation.y = Math.cos(now) * Math.PI * 0.4;
+
+	skeletonMesh.position.x = (Date.now() % 10000) * 0.1;
 
 	// update the animation
 	skeletonMesh.update(delta);
