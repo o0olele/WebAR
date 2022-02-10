@@ -1,131 +1,203 @@
-<html>
-<head>
-<meta charset="UTF-8">
-<title>spine-threejs</title>
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 <script src="./js/three.js"></script>
 <script src="./js/spine-threejs.js"></script>
-</head>
-<style>
-	* { margin: 0; padding: 0; }
-	body, html { height: 100% }
-	canvas { position: absolute; width: 100% ;height: 100%; }
-</style>
-<body>
-<script>
+<script src="./js/ar.js"></script>
+<script>THREEx.ArToolkitContext.baseURL = '../'</script>
 
-var scene, camera, renderer;
-var geometry, material, mesh, skeletonMesh;
-var assetManager;
-var canvas;
-var lastFrameTime = Date.now() / 1000;
+<body style='margin : 0px; overflow: hidden; font-family: Monospace;'>
+    <script>
+        //////////////////////////////////////////////////////////////////////////////////
+        //		Init
+        //////////////////////////////////////////////////////////////////////////////////
 
-function init () {
-	// create the THREE.JS camera, scene and renderer (WebGL)
-	var width = window.innerWidth, height = window.innerHeight;	
-	camera = new THREE.PerspectiveCamera(75, width / height, 1, 3000);
-	camera.position.y = 100;
-	camera.position.z = 400;	
-	scene = new THREE.Scene();
-	renderer = new THREE.WebGLRenderer();
-	renderer.setSize(width, height);
-	document.body.appendChild(renderer.domElement);
-	canvas = renderer.domElement;
+        // init renderer
+        var renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: true
+        });
+        renderer.setClearColor(new THREE.Color('lightgrey'), 0)
+        renderer.setSize(640, 480);
+        renderer.domElement.style.position = 'absolute'
+        renderer.domElement.style.top = '0px'
+        renderer.domElement.style.left = '0px'
+        document.body.appendChild(renderer.domElement);
 
-	// load the assets required to display the Raptor model
-	assetManager = new spine.threejs.AssetManager();
-	assetManager.loadText("assets/build_char_291_aglina_boc_1.json");
-	assetManager.loadText("assets/build_char_291_aglina_boc_1.atlas");
-	assetManager.loadTexture("assets/build_char_291_aglina_boc_1.png");
+        // array of functions for the rendering loop
+        var onRenderFcts = [];
 
-	requestAnimationFrame(load);
-}
+        // init scene and camera
+        var scene = new THREE.Scene();
 
-function load (name, scale) {
-	if (assetManager.isLoadingComplete()) {	
-		// Add a box to the scene to which we attach the skeleton mesh
-		geometry = new THREE.BoxGeometry(200, 200, 200);
-		material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
-		mesh = new THREE.Mesh(geometry, material);
-		// scene.add(mesh);
+        //////////////////////////////////////////////////////////////////////////////////
+        //		Initialize a basic camera
+        //////////////////////////////////////////////////////////////////////////////////
 
-		// Load the texture atlas using name.atlas and name.png from the AssetManager.
-		// The function passed to TextureAtlas is used to resolve relative paths.
-		atlas = new spine.TextureAtlas(assetManager.get("assets/build_char_291_aglina_boc_1.atlas"), function(path) {
-			return assetManager.get("assets/" + path);		
-		});
-		var skeletonData = loadSkeleton("build_char_291_aglina_boc_1", 0.4);
+        // Create a camera
+        var camera = new THREE.Camera();
+        scene.add(camera);
 
-		// Create a SkeletonMesh from the data and attach it to the scene
-		skeletonMesh = new spine.threejs.SkeletonMesh(skeletonData);
-		skeletonMesh.state.setAnimation(0, "Move", true);
-		scene.add(skeletonMesh)
-		//mesh.add(skeletonMesh);
+        //////////////////////////////////////////////////////////////////////////////////
+        //		Init Spine
+        //////////////////////////////////////////////////////////////////////////////////
+        var assetManager = new spine.threejs.AssetManager()
+        assetManager.loadText("assets/build_char_291_aglina_boc_1.json");
+        assetManager.loadText("assets/build_char_291_aglina_boc_1.atlas");
+        assetManager.loadTexture("assets/build_char_291_aglina_boc_1.png");
 
-		requestAnimationFrame(render);
-	} else requestAnimationFrame(load);
-}
+        ////////////////////////////////////////////////////////////////////////////////
+        //          handle arToolkitSource
+        ////////////////////////////////////////////////////////////////////////////////
 
-function loadSkeleton (name, scale) {	
-	// Load the texture atlas using name.atlas and name.png from the AssetManager.
-	// The function passed to TextureAtlas is used to resolve relative paths.
-	atlas = new spine.TextureAtlas(assetManager.get("assets/" + name + ".atlas"), function(path) {
-		return assetManager.get("assets/" + path);		
-	});
+        var arToolkitSource = new THREEx.ArToolkitSource({
+            // to read from the webcam
+            sourceType: 'webcam',
 
-	// Create a AtlasAttachmentLoader that resolves region, mesh, boundingbox and path attachments
-	atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+            // // to read from an image
+            // sourceType : 'image',
+            // sourceUrl : THREEx.ArToolkitContext.baseURL + '../data/images/img.jpg',
 
-	// Create a SkeletonJson instance for parsing the .json file.
-	var skeletonJson = new spine.SkeletonJson(atlasLoader);
-	
-	// Set the scale to apply during parsing, parse the file, and create a new skeleton.
-	skeletonJson.scale = scale;
-	var skeletonData = skeletonJson.readSkeletonData(assetManager.get("assets/" + name + ".json"));
-	return skeletonData;
-}
+            // to read from a video
+            // sourceType : 'video',
+            // sourceUrl : THREEx.ArToolkitContext.baseURL + '../data/videos/headtracking.mp4',
+        })
 
-var lastTime = Date.now();
-function render() {
-	// calculate delta time for animation purposes
-	var now = Date.now() / 1000;
-	var delta = now - lastFrameTime;
-	lastFrameTime = now;
-	
-	// resize canvas to use full page, adjust camera/renderer
-	resize();
+        arToolkitSource.init(function onReady() {
+            setTimeout(() => {
+                onResize()
+            }, 2000);
+        })
 
-	// rotate the cube
-	// mesh.rotation.x = Math.sin(now) * Math.PI * 0.2;
-	// mesh.rotation.y = Math.cos(now) * Math.PI * 0.4;
+        // handle resize
+        window.addEventListener('resize', function () {
+            onResize()
+        })
 
-	skeletonMesh.position.x = (Date.now() % 10000) * 0.1;
+        function onResize() {
+            arToolkitSource.onResizeElement()
+            arToolkitSource.copyElementSizeTo(renderer.domElement)
+            if (arToolkitContext.arController !== null) {
+                arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas)
+            }
+        }
+        ////////////////////////////////////////////////////////////////////////////////
+        //          initialize arToolkitContext
+        ////////////////////////////////////////////////////////////////////////////////
 
-	// update the animation
-	skeletonMesh.update(delta);
 
-	// render the scene
-	renderer.render(scene, camera);
+        // create atToolkitContext
+        var arToolkitContext = new THREEx.ArToolkitContext({
+            cameraParametersUrl: THREEx.ArToolkitContext.baseURL + '../data/data/camera_para.dat',
+            detectionMode: 'mono',
+        })
+        // initialize it
+        arToolkitContext.init(function onCompleted() {
+            // copy projection matrix to camera
+            camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix());
+        })
 
-	requestAnimationFrame(render);
-}
+        // update artoolkit on every frame
+        onRenderFcts.push(function () {
+            if (arToolkitSource.ready === false) return
 
-function resize () {
-	var w = window.innerWidth;
-	var h = window.innerHeight;	
-	if (canvas.width != w || canvas.height != h) {
-		canvas.width = w;
-		canvas.height = h;
-	}
+            arToolkitContext.update(arToolkitSource.domElement)
 
-	camera.aspect = w / h;
-    camera.updateProjectionMatrix();
+            // update scene.visible if the marker is seen
+            scene.visible = camera.visible
+        })
 
-    renderer.setSize(w, h);
-}
+        ////////////////////////////////////////////////////////////////////////////////
+        //          Create a ArMarkerControls
+        ////////////////////////////////////////////////////////////////////////////////
 
-(function() {
-	init();
-}());
-</script>
+        // init controls for camera
+        var markerControls = new THREEx.ArMarkerControls(arToolkitContext, camera, {
+            type: 'pattern',
+            patternUrl: THREEx.ArToolkitContext.baseURL + '../data/data/patt.hiro',
+            // patternUrl : THREEx.ArToolkitContext.baseURL + '../data/data/patt.kanji',
+            // as we controls the camera, set changeMatrixMode: 'cameraTransformMatrix'
+            changeMatrixMode: 'cameraTransformMatrix'
+        })
+        // as we do changeMatrixMode: 'cameraTransformMatrix', start with invisible scene
+        scene.visible = false
+
+        //////////////////////////////////////////////////////////////////////////////////
+        //		add an object in the scene
+        //////////////////////////////////////////////////////////////////////////////////
+
+        // add a torus knot
+        var geometry = new THREE.CubeGeometry(1, 1, 1);
+        var material = new THREE.MeshNormalMaterial({
+            transparent: true,
+            opacity: 0.5,
+            side: THREE.DoubleSide
+        });
+        var mesh = new THREE.Mesh(geometry, material);
+        mesh.position.y = geometry.parameters.height / 2
+        scene.add(mesh);
+
+        function loadSkeleton(name, scale) {
+            // Load the texture atlas using name.atlas and name.png from the AssetManager.
+            // The function passed to TextureAtlas is used to resolve relative paths.
+            atlas = new spine.TextureAtlas(assetManager.get("assets/" + name + ".atlas"), function (path) {
+                return assetManager.get("assets/" + path);
+            });
+
+            // Create a AtlasAttachmentLoader that resolves region, mesh, boundingbox and path attachments
+            atlasLoader = new spine.AtlasAttachmentLoader(atlas);
+
+            // Create a SkeletonJson instance for parsing the .json file.
+            var skeletonJson = new spine.SkeletonJson(atlasLoader);
+
+            // Set the scale to apply during parsing, parse the file, and create a new skeleton.
+            skeletonJson.scale = scale;
+            var skeletonData = skeletonJson.readSkeletonData(assetManager.get("assets/" + name + ".json"));
+            return skeletonData;
+        }
+
+        // Load the texture atlas using name.atlas and name.png from the AssetManager.
+        // The function passed to TextureAtlas is used to resolve relative paths.
+        atlas = new spine.TextureAtlas(assetManager.get("assets/build_char_291_aglina_boc_1.atlas"), function (path) {
+            return assetManager.get("assets/" + path);
+        });
+        var skeletonData = loadSkeleton("build_char_291_aglina_boc_1", 0.4);
+
+        // Create a SkeletonMesh from the data and attach it to the scene
+        skeletonMesh = new spine.threejs.SkeletonMesh(skeletonData);
+        skeletonMesh.state.setAnimation(0, "Move", true);
+        scene.add(skeletonMesh)
+
+        onRenderFcts.push(function (delta) {
+            mesh.rotation.x += Math.PI * delta
+
+            skeletonMesh.position.x = (Date.now() % 10000) * 0.1;
+
+            // update the animation
+            skeletonMesh.update(delta);
+        })
+
+        //////////////////////////////////////////////////////////////////////////////////
+        //		render the whole thing on the page
+        //////////////////////////////////////////////////////////////////////////////////
+
+        // render the scene
+        onRenderFcts.push(function () {
+            renderer.render(scene, camera);
+        })
+
+        // run the rendering loop
+        var lastTimeMsec = null
+        requestAnimationFrame(function animate(nowMsec) {
+            // keep looping
+            requestAnimationFrame(animate);
+            // measure time
+            lastTimeMsec = lastTimeMsec || nowMsec - 1000 / 60
+            var deltaMsec = Math.min(200, nowMsec - lastTimeMsec)
+            lastTimeMsec = nowMsec
+            // call each update function
+            onRenderFcts.forEach(function (onRenderFct) {
+                onRenderFct(deltaMsec / 1000, nowMsec / 1000)
+            })
+        })
+    </script>
 </body>
-</html>
