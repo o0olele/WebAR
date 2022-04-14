@@ -1,5 +1,5 @@
-# WebAr
+# WebAR
 Web AR with Spine Anime.
 
-# Spine
+## Spine
 ![aglina](./public/img/aglina.webp)
