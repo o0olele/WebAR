@@ -1,6 +1,10 @@
 # WebAR
 Web AR with Spine Anime.
 
+## Dependences
+- AR.js
+- Spine javascript runtime
+
 ## Usage
 - Install Golang
 - Run
