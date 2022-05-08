@@ -1,7 +1,7 @@
 # WebAR
 Web AR with Spine Anime.
 
-## Libs
+## Dependencies
 - AR.js
 - Spine javascript runtime
 
